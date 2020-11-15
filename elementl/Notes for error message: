@@ -1,0 +1,171 @@
+Notes for error message:
+1. when providing inputs for solid example_computation, got error message:
+dagster.core.errors.DagsterInvalidConfigError: Error in config for pipeline example_computation_pipeline
+    Error 1: Undefined field "nums[0]" at path root:solids:example_computation:inputs:nums[0]. Expected: "{ json: { path: String } pickle: { path: String } value: Any }".
+    Error 2: Undefined field "nums[1]" at path root:solids:example_computation:inputs:nums[1]. Expected: "{ json: { path: String } pickle: { path: String } value: Any }".
+
+repro:
+execute_pipeline(
+        example_computation_pipeline,
+        run_config={ # there's default value so the run_config is optional
+            "solids": {
+                "example_computation": {
+                    "inputs" : {"nums": [{"nums[0]":100}, {"nums[1]":200}]},
+                    "config": {"operator": "divide"}
+                }
+            }
+        }
+    )
+
+The inputs for example_computation should be a list, here [100, 200],
+but it doesn't work like below: 
+"inputs" : {"nums": [100, 200]}
+
+This would lead to another error message:
+dagster.core.errors.DagsterInvalidConfigError: Error in config for pipeline example_computation_pipeline
+    Error 1: Value for selector type at path root:solids:example_computation:inputs:nums[0] must be a dict
+    Error 2: Value for selector type at path root:solids:example_computation:inputs:nums[1] must be a dict
+
+
+The expected format: "{ json: { path: String } pickle: { path: String } value: Any }"
+is unclear to me.
+
+
+2. When providing two inputs for solid res1 and res2, got invalid type error message like below:
+
+(dagster-3.7.4) ➜  elementl git:(myexpl) ✗ python3 config_mapping_and_expectation_result.py
+Invalid -W option ignored: unknown warning category: 'ExperimentalWarning'
+/Users/a16502/dagster/python_modules/dagster/dagster/core/definitions/composition.py:39: UserWarning: While in @composite_solid context 'example_computation', received an uninvoked solid 'operate_two_nums'.
+'operate_two_nums' was aliased as 'res1'.
+  warnings.warn(warning_message.strip())
+/Users/a16502/dagster/python_modules/dagster/dagster/core/definitions/composition.py:39: UserWarning: While in @composite_solid context 'example_computation', received an uninvoked solid 'operate_two_nums'.
+'operate_two_nums' was aliased as 'res2'.
+  warnings.warn(warning_message.strip())
+Traceback (most recent call last):
+  File "config_mapping_and_expectation_result.py", line 76, in <module>
+    config_schema={"operator": Field(str, is_required=False, default_value="divide")}
+  File "/Users/a16502/dagster/python_modules/dagster/dagster/core/definitions/decorators/composite_solid.py", line 75, in __call__
+    output = fn(**kwargs)
+  File "config_mapping_and_expectation_result.py", line 81, in example_computation
+    return combine(res1([num1, num2]), res2([num1, num2])) # pylint: disable=no-value-for-parameter
+  File "/Users/a16502/dagster/python_modules/dagster/dagster/core/definitions/composition.py", line 235, in __call__
+    "(at position {idx})".format(idx=idx),
+  File "/Users/a16502/dagster/python_modules/dagster/dagster/core/definitions/composition.py", line 291, in _process_argument_node
+    solid_name=solid_name,
+dagster.core.errors.DagsterInvalidDefinitionError: In @composite_solid example_computation, received a list containing invalid types for input "nums" (at position 0) in solid invocation res1. Lists can only contain the output from previous solid invocations.
+
+
+3. TypeError occurs when provide pickle/json file as one of the inputs for custom dagster type:
+
+(dagster-3.7.4) ➜  elementl git:(myexpl) ✗ /Users/a16502/.pyenv/versions/dagster-3.7.4/bin/python /Users/a16502/dagster/elementl/config_mapping_and_expectation_result.py
+Invalid -W option ignored: unknown warning category: 'ExperimentalWarning'
+2020-11-05 15:51:06 - dagster - DEBUG - example_computation_pipeline - 837372cb-d6e4-4e55-9ff5-a9c4633501eb - 63436 - PIPELINE_START - Started execution of pipeline "example_computation_pipeline".
+2020-11-05 15:51:06 - dagster - DEBUG - example_computation_pipeline - 837372cb-d6e4-4e55-9ff5-a9c4633501eb - 63436 - ENGINE_EVENT - Executing steps in process (pid: 63436)
+2020-11-05 15:51:06 - dagster - DEBUG - example_computation_pipeline - 837372cb-d6e4-4e55-9ff5-a9c4633501eb - 63436 - example_computation.res1.compute - STEP_START - Started execution of step "example_computation.res1.compute".
+2020-11-05 15:51:06 - dagster - DEBUG - example_computation_pipeline - 837372cb-d6e4-4e55-9ff5-a9c4633501eb - 63436 - example_computation.res1.compute - STEP_INPUT - Got input "nums" of type "NotZero". (Type check passed).
+2020-11-05 15:51:06 - dagster - ERROR - example_computation_pipeline - 837372cb-d6e4-4e55-9ff5-a9c4633501eb - 63436 - example_computation.res1.compute - STEP_FAILURE - Execution of step "example_computation.res1.compute" failed.
+
+TypeError: unsupported operand type(s) for +: 'dict' and 'dict'
+
+  File "/Users/a16502/dagster/python_modules/dagster/dagster/core/errors.py", line 181, in user_code_error_boundary
+    yield
+  File "/Users/a16502/dagster/python_modules/dagster/dagster/core/execution/plan/execute_step.py", line 413, in _user_event_sequence_for_step_compute_fn
+    for event in iterate_with_context(raise_interrupts_immediately, gen):
+  File "/Users/a16502/dagster/python_modules/dagster/dagster/utils/__init__.py", line 444, in iterate_with_context
+    next_output = next(iterator)
+  File "/Users/a16502/dagster/python_modules/dagster/dagster/core/execution/plan/compute.py", line 100, in _execute_core_compute
+    for step_output in _yield_compute_results(compute_context, inputs, compute_fn):
+  File "/Users/a16502/dagster/python_modules/dagster/dagster/core/execution/plan/compute.py", line 71, in _yield_compute_results
+    for event in user_event_sequence:
+  File "/Users/a16502/dagster/python_modules/dagster/dagster/core/definitions/decorators/solid.py", line 227, in compute
+    result = fn(context, **kwargs)
+  File "/Users/a16502/dagster/elementl/config_mapping_and_expectation_result.py", line 30, in operate_two_nums
+    return (nums[1] + nums[0]) / x  # 150
+
+2020-11-05 15:51:06 - dagster - ERROR - example_computation_pipeline - 837372cb-d6e4-4e55-9ff5-a9c4633501eb - 63436 - PIPELINE_FAILURE - Execution of pipeline "example_computation_pipeline" failed. An exception was thrown during execution.
+
+TypeError: unsupported operand type(s) for +: 'dict' and 'dict'
+
+  File "/Users/a16502/dagster/python_modules/dagster/dagster/core/execution/api.py", line 668, in _pipeline_execution_iterator
+    for event in pipeline_context.executor.execute(pipeline_context, execution_plan):
+  File "/Users/a16502/dagster/python_modules/dagster/dagster/core/executor/in_process.py", line 36, in execute
+    for event in inner_plan_execution_iterator(pipeline_context, execution_plan):
+  File "/Users/a16502/dagster/python_modules/dagster/dagster/core/execution/plan/execute_plan.py", line 78, in inner_plan_execution_iterator
+    _dagster_event_sequence_for_step(step_context, retries)
+  File "/Users/a16502/dagster/python_modules/dagster/dagster/core/execution/plan/execute_plan.py", line 272, in _dagster_event_sequence_for_step
+    raise dagster_user_error.user_exception
+  File "/Users/a16502/dagster/python_modules/dagster/dagster/core/errors.py", line 181, in user_code_error_boundary
+    yield
+  File "/Users/a16502/dagster/python_modules/dagster/dagster/core/execution/plan/execute_step.py", line 413, in _user_event_sequence_for_step_compute_fn
+    for event in iterate_with_context(raise_interrupts_immediately, gen):
+  File "/Users/a16502/dagster/python_modules/dagster/dagster/utils/__init__.py", line 444, in iterate_with_context
+    next_output = next(iterator)
+  File "/Users/a16502/dagster/python_modules/dagster/dagster/core/execution/plan/compute.py", line 100, in _execute_core_compute
+    for step_output in _yield_compute_results(compute_context, inputs, compute_fn):
+  File "/Users/a16502/dagster/python_modules/dagster/dagster/core/execution/plan/compute.py", line 71, in _yield_compute_results
+    for event in user_event_sequence:
+  File "/Users/a16502/dagster/python_modules/dagster/dagster/core/definitions/decorators/solid.py", line 227, in compute
+    result = fn(context, **kwargs)
+  File "/Users/a16502/dagster/elementl/config_mapping_and_expectation_result.py", line 30, in operate_two_nums
+    return (nums[1] + nums[0]) / x  # 150
+
+Traceback (most recent call last):
+  File "/Users/a16502/dagster/python_modules/dagster/dagster/core/execution/plan/execute_plan.py", line 212, in _dagster_event_sequence_for_step
+    for step_event in check.generator(step_events):
+  File "/Users/a16502/dagster/python_modules/dagster/dagster/core/execution/plan/execute_step.py", line 276, in core_dagster_event_sequence_for_step
+    _step_output_error_checked_user_event_sequence(step_context, user_event_sequence)
+  File "/Users/a16502/dagster/python_modules/dagster/dagster/core/execution/plan/execute_step.py", line 55, in _step_output_error_checked_user_event_sequence
+    for user_event in user_event_sequence:
+  File "/Users/a16502/dagster/python_modules/dagster/dagster/core/execution/plan/execute_step.py", line 414, in _user_event_sequence_for_step_compute_fn
+    yield event
+  File "/Users/a16502/.pyenv/versions/3.7.4/lib/python3.7/contextlib.py", line 130, in __exit__
+    self.gen.throw(type, value, traceback)
+  File "/Users/a16502/dagster/python_modules/dagster/dagster/core/errors.py", line 192, in user_code_error_boundary
+    error_cls(msg_fn(), user_exception=e, original_exc_info=sys.exc_info(), **kwargs), e
+  File "/Users/a16502/.pyenv/versions/dagster-3.7.4/lib/python3.7/site-packages/future/utils/__init__.py", line 403, in raise_from
+    exec(execstr, myglobals, mylocals)
+  File "<string>", line 1, in <module>
+dagster.core.errors.DagsterExecutionStepExecutionError: Error occurred during the execution of step:
+        step key: "example_computation.res1.compute"
+        solid invocation: "res1"
+        solid definition: "operate_two_nums"
+        
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/a16502/dagster/elementl/config_mapping_and_expectation_result.py", line 111, in <module>
+    "config": {"operator": "divide"},
+  File "/Users/a16502/dagster/python_modules/dagster/dagster/core/execution/api.py", line 335, in execute_pipeline
+    raise_on_error=raise_on_error,
+  File "/Users/a16502/dagster/python_modules/dagster/dagster/core/telemetry.py", line 90, in wrap
+    result = f(*args, **kwargs)
+  File "/Users/a16502/dagster/python_modules/dagster/dagster/core/execution/api.py", line 378, in _logged_execute_pipeline
+    return execute_run(pipeline, pipeline_run, instance, raise_on_error=raise_on_error)
+  File "/Users/a16502/dagster/python_modules/dagster/dagster/core/execution/api.py", line 177, in execute_run
+    event_list = list(_execute_run_iterable)
+  File "/Users/a16502/dagster/python_modules/dagster/dagster/core/execution/api.py", line 731, in __iter__
+    execution_plan=self.execution_plan, pipeline_context=self.pipeline_context,
+  File "/Users/a16502/dagster/python_modules/dagster/dagster/core/execution/api.py", line 668, in _pipeline_execution_iterator
+    for event in pipeline_context.executor.execute(pipeline_context, execution_plan):
+  File "/Users/a16502/dagster/python_modules/dagster/dagster/core/executor/in_process.py", line 36, in execute
+    for event in inner_plan_execution_iterator(pipeline_context, execution_plan):
+  File "/Users/a16502/dagster/python_modules/dagster/dagster/core/execution/plan/execute_plan.py", line 78, in inner_plan_execution_iterator
+    _dagster_event_sequence_for_step(step_context, retries)
+  File "/Users/a16502/dagster/python_modules/dagster/dagster/core/execution/plan/execute_plan.py", line 272, in _dagster_event_sequence_for_step
+    raise dagster_user_error.user_exception
+  File "/Users/a16502/dagster/python_modules/dagster/dagster/core/errors.py", line 181, in user_code_error_boundary
+    yield
+  File "/Users/a16502/dagster/python_modules/dagster/dagster/core/execution/plan/execute_step.py", line 413, in _user_event_sequence_for_step_compute_fn
+    for event in iterate_with_context(raise_interrupts_immediately, gen):
+  File "/Users/a16502/dagster/python_modules/dagster/dagster/utils/__init__.py", line 444, in iterate_with_context
+    next_output = next(iterator)
+  File "/Users/a16502/dagster/python_modules/dagster/dagster/core/execution/plan/compute.py", line 100, in _execute_core_compute
+    for step_output in _yield_compute_results(compute_context, inputs, compute_fn):
+  File "/Users/a16502/dagster/python_modules/dagster/dagster/core/execution/plan/compute.py", line 71, in _yield_compute_results
+    for event in user_event_sequence:
+  File "/Users/a16502/dagster/python_modules/dagster/dagster/core/definitions/decorators/solid.py", line 227, in compute
+    result = fn(context, **kwargs)
+  File "/Users/a16502/dagster/elementl/config_mapping_and_expectation_result.py", line 30, in operate_two_nums
+    return (nums[1] + nums[0]) / x  # 150
+TypeError: unsupported operand type(s) for +: 'dict' and 'dict'

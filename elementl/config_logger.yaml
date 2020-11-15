@@ -1,0 +1,10 @@
+solids:
+    example_computation: 
+        inputs: 
+            nums: [{"value": 100}, {"value": 200}] # try [{"value": 0}, {"value": 200}]] -> INFO + ZeroDivisionError 
+        config:
+            operator: "divide"
+loggers:
+    console:
+      config:
+        log_level: INFO

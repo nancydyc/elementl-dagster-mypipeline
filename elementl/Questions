@@ -1,0 +1,76 @@
+define_typed_input_schema_dict(value_config_type):
+    check.inst_param(value_config_type, 'value_config_type', ConfigType) # imported
+                                                            #? do we need a para for specific ConfigType?
+    # if no error raise from above
+    return Selector(                                    
+        {
+            'value': Field(value_config_type),
+            'json': define_path_dict_field(),
+            'pickle': define_path_dict_field(),
+        },
+    )
+                                        ? where to get the message 
+def inst_param(obj, param_name, ttype, additional_message=None):
+             /             |          \
+            /              |           \
+value_config_type, 'value_config_type', ConfigType
+input type                              dagster config type
+    
+    if not isinstance(obj, ttype):
+        raise_with_traceback(
+            _param_type_mismatch_exception(
+                obj, ttype, param_name, additional_message=additional_message
+            )
+        )
+    return obj
+
+
+def _param_type_mismatch_exception(obj, ttype, param_name, additional_message=None):
+    if isinstance(ttype, tuple):
+        type_names = sorted([t.__name__ for t in ttype])
+
+                ? class pass?
+        return ParameterCheckError(
+            'Param "{name}" is not one of {type_names}. Got {obj} which is type {obj_type}.'
+            "{additional_message}".format(
+                name=param_name,
+                obj=repr(obj),
+                type_names=type_names,
+                obj_type=type(obj),
+                additional_message=" " + additional_message if additional_message else "",
+            )
+        )
+    else:
+        return ParameterCheckError(
+            'Param "{name}" is not a {type}. Got {obj} which is type {obj_type}.'
+            "{additional_message}".format(
+                name=param_name,
+                obj=repr(obj),
+                type=ttype.__name__,
+                obj_type=type(obj),
+                additional_message=" " + additional_message if additional_message else "",
+            )
+        )
+
+
+1. check.inst-param: check if value_config_type matches ConfigType
+    if not, raise error message
+    if so, return selector
+
+2. value_config_type: this input para takes from the run config 
+
+3. ConfigType: this class backing DagsterTypes as they are used to process config data
+
+4. Selector:  choose any key value pair config from selector to use
+
+5. 'value': Field(value_config_type),
+
+    - define config schema for value 
+
+6. 'json': define_path_dict_field(),
+
+    - {'path': Field(ConfigStringInstance)}
+
+        - ConfigStringInstance: String() # map config corresponding type
+            
+7. 'pickle': define_path_dict_field(),

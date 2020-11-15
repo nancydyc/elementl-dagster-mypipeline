@@ -1,0 +1,10 @@
+Notes to file issues
+
+1. mypy compliance
+tutorial: https://docs.dagster.io/tutorial/types#mypy-compliance 
+overview: https://docs.dagster.io/overview/types#mypy-compliance
+
+In the first option of the tutorial, it won't catch type errors if the types of your input definition and output definition are more than regular python types
+
+The second option which is the same as that in overview is for richer type check = custom dagster type.
+typing.TYPE_CHECKING is from python, not dagster

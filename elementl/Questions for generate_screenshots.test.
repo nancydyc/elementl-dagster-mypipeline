@@ -1,0 +1,69 @@
+Questions for generate_screenshots.test.js 
+
+1. require("puppeteer")
+
+If the file doesn't start with "./" or "/", then it is either considered a core module (and the local Node.js path is checked), or a dependency in the local node_modules folder. 
+If the file starts with "./" it is considered a relative file to the file that called require.
+If the file starts with "/", it is considered an absolute path.
+NOTE: you can omit ".js" and require will automatically append it if needed.
+An extra note: if the filename passed to require is actually a directory, it will first look for package.json in the directory and load the file referenced in the main property.
+Otherwise, it will look for an index.js.
+
+
+2. { toMatchImageSnapshot }
+Given an image (Buffer instance with PNG image data) the toMatchImageSnapshot() matcher will create a __image_snapshots__ directory in the directory the test is in and will store the baseline snapshot image there on the first run
+On subsequent test runs the matcher will compare the image being passed against the stored snapshot.
+To update the stored image snapshot run Jest with --updateSnapshot or -u argument
+
+
+3. { spawn }
+
+spawn('git', ['log'])
+
+The spawn function will spawn a new process of <git log type>.
+The first argument of the function represents a path for an executable file that should start the process, and the second argument is an arguments vector that will be given to the executable.
+The returned process object will hold a property for each std type represented as a Stream: .stdin - WriteStream, .stout - ReadStream and finally .stderr - ReadStream.
+
+
+4. expect: test a value via jest
+
+
+5. args.concat(["-p", port || 3000])
+> args, "-p", port || 3000
+
+? what will args and port be?
+
+
+6. pid? 
+dagit.pid?
+dagit.removeAllListeners
+dagit.kill
+
+
+7. puppeteer.launch({ args: ["--disable-dev-shm-usage"] })
+
+? what is command option "--disable-dev-shm-usage"?
+
+
+8. tearDownDagit = async (ps) => {
+    ...
+}
+
+? When is ps used when ps=dagit?
+
+
+9. jest:
+beforeAll
+afterAll
+beforeEach
+it
+
+
+10. page.on("console", (msg) => console.log("PAGE LOG:", msg.text()));
+
+? what will be passed to msg?
+
+
+11. page.reload
+    page.waitFor
+    page.waitForSelector
