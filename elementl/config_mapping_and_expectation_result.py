@@ -49,7 +49,8 @@ def combine(_context, num1, num2):
         success=result > 0,
         description="ensure positive result",
         metadata_entries=[
-            EventMetadataEntry.text("{result}".format(result=result), label="combine result")
+            EventMetadataEntry.text("{result}".format(
+                result=result), label="combine result")
         ],
     )
     yield Output(result)
@@ -80,7 +81,8 @@ def config_mapping_fn(cfg):
 
 @composite_solid(
     config_fn=config_mapping_fn,
-    config_schema={"operator": Field(str, is_required=False, default_value="divide")},
+    config_schema={"operator": Field(
+        str, is_required=False, default_value="divide")},
 )
 def example_computation(nums: list):
     res1 = operate_two_nums.alias("res1")
